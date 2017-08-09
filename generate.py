@@ -12,7 +12,7 @@ output_file_path = os.path.join(workdir, 'haproxy.cfg')
 # Preparing arguments
 argparser = ArgumentParser(description='Generate config')
 argparser.add_argument('-s', '--source', help='path to source file', type=str, required=True)
-argparser.add_argument('-i', '--inter', help='check interval, minutes', type=int, default=10)
+argparser.add_argument('-i', '--inter', help='check interval, minutes', type=int, default=100)
 argparser.add_argument('-l', '--limit', help='limit records from source file', type=int)
 args = argparser.parse_args()
 
