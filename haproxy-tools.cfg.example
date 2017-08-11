@@ -1,0 +1,9 @@
+[haproxy]
+socket=/var/run/proxy.sock
+[graphite]
+prefix=haproxy.HOSTNAME.
+host=graphite
+port=2003
+proto=udp
+general_values=scur,rate,conn_rate
+

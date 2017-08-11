@@ -1,0 +1,40 @@
+global
+    log         127.0.0.1 local2 notice
+    pidfile     /var/run/haproxy.pid
+    maxconn     20000
+    user        haproxy
+    group       haproxy
+    daemon
+    external-check
+    max-spread-checks 10m
+    spread-checks	50
+    #debug
+    stats socket /var/run/haproxy.sock mode 600 level admin
+    stats timeout 2m #Wait up to 2 minutes for input
+
+defaults
+    mode                    tcp
+    log                     global
+    option                  dontlognull
+    option                  redispatch
+    retries                 2
+    timeout queue           1m
+    timeout connect         20s
+    timeout client          1m
+    timeout server          1m
+    timeout check           30s
+    maxconn                 10000
+
+#---------------------------------------------------------------------
+# main frontend which proxys to the backends
+#---------------------------------------------------------------------
+frontend  main
+    bind 192.168.0.1:1080
+    default_backend             proxy
+
+backend proxy
+    balance     roundrobin
+    option external-check
+    external-check command /etc/haproxy/check.py
+${servers}
+
