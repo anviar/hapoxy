@@ -105,5 +105,13 @@ for item in config['graphite']['general_values'].split(','):
 send_graphite('proxies.up', proxy_up)
 send_graphite('proxies.down', proxy_down)
 
+lastsess = list()
+for p in parsed_table['proxy']:
+    if 'addr' in parsed_table['proxy'][p]:
+        lastsess.append(parsed_table['proxy'][p]['lastsess'])
+send_graphite('lastsess.min', min(lastsess))
+send_graphite('lastsess.max', max(lastsess))
+send_graphite('lastsess.avg', sum(lastsess) // len(lastsess))
+
 graphite_sock.close()
 os.remove(pidfile)
