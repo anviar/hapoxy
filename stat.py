@@ -78,10 +78,11 @@ for item in config['graphite']['general_values'].split(','):
 proxy_up = 0
 proxy_down = 0
 for proxy in parsed_table['proxy']:
-    if parsed_table['proxy'][proxy]['status'] == 'UP':
-        proxy_up += 1
-    elif parsed_table['proxy'][proxy]['status'] == 'DOWN':
-        proxy_down += 1
+    if 'addr' in parsed_table['proxy'][proxy]:
+        if parsed_table['proxy'][proxy]['status'].startswith('UP'):
+            proxy_up += 1
+        elif parsed_table['proxy'][proxy]['status'].startswith('DOWN'):
+            proxy_down += 1
 
 graphite_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
