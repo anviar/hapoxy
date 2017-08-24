@@ -107,7 +107,7 @@ send_graphite('proxies.down', proxy_down)
 
 lastsess = list()
 for p in parsed_table['proxy']:
-    if 'addr' in parsed_table['proxy'][p]:
+    if 'addr' in parsed_table['proxy'][p] and parsed_table['proxy'][p]['status'] == 'UP':
         lastsess.append(parsed_table['proxy'][p]['lastsess'])
 send_graphite('lastsess.min', min(lastsess))
 send_graphite('lastsess.max', max(lastsess))
