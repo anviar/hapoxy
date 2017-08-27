@@ -6,10 +6,13 @@ import requests
 import configparser
 import re
 import logging
+import mysql.connector
+import platform
 
 workdir = os.path.dirname(os.path.realpath(__file__))
 config = configparser.ConfigParser()
-config.read(os.path.join(workdir, 'haproxy-tools.cfg'))
+config_file = os.path.join(workdir, 'haproxy-tools.cfg')
+config.read(config_file)
 
 # 'http://ipinfo.io/ip',
 # 'http://ifconfig.me/ip',
@@ -29,7 +32,7 @@ proxies = {
 logging.basicConfig(
     filename=config['check']['log'],
     format='%(asctime)s [%(levelname)s] %(message)s',
-    level=logging.INFO
+    level=logging.WARNING
 )
 
 
@@ -52,6 +55,23 @@ if success:
     ipaddress = request.text.strip()
     if not re.match('([0-9]{1,3}.){3}[0-9]{1,3}', ipaddress):
         ipaddress = None
+    else:
+        try:
+            jobs_cnx = mysql.connector.connect(option_files=config_file)
+            jobs_cursor = jobs_cnx.cursor()
+            jobs_cursor.execute("""
+              REPLACE INTO haproxy (host, name, ip)
+              VALUES (%s, %s, %s)
+              """, (
+                platform.node(),
+                os.environ['HAPROXY_SERVER_NAME'],
+                ipaddress
+            ))
+            jobs_cnx.commit()
+            jobs_cursor.close()
+            jobs_cnx.close()
+        except:
+            pass
     logging.info(
         os.environ['HAPROXY_SERVER_NAME']
         + ' -> ' + req_url
