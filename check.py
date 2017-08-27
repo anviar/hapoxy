@@ -60,11 +60,15 @@ if success:
             jobs_cnx = mysql.connector.connect(option_files=config_file)
             jobs_cursor = jobs_cnx.cursor()
             jobs_cursor.execute("""
-              REPLACE INTO haproxy (host, name, ip)
-              VALUES (%s, %s, %s)
+              INSERT INTO haproxy (host, name, ip, server_addr, server_port)
+              VALUES (%s, %s, %s, %s, %s)
+              ON DUPLICATE KEY UPDATE ip=%s
               """, (
                 platform.node(),
                 os.environ['HAPROXY_SERVER_NAME'],
+                ipaddress,
+                os.environ['HAPROXY_SERVER_ADDR'],
+                os.environ['HAPROXY_SERVER_PORT'],
                 ipaddress
             ))
             jobs_cnx.commit()
