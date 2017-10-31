@@ -4,17 +4,19 @@ import os
 from string import Template
 from argparse import ArgumentParser
 
-# some work variables
-workdir = os.path.dirname(os.path.realpath(__file__))
-template_file_path = os.path.join(workdir, 'haproxy.template')
-output_file_path = os.path.join(workdir, 'haproxy.cfg')
-
 # Preparing arguments
 argparser = ArgumentParser(description='Generate config')
 argparser.add_argument('-s', '--source', help='path to source file', type=str, required=True)
+argparser.add_argument('-o', '--output',
+                       help='path to source file', type=str, default='collect.conf')
 argparser.add_argument('-i', '--inter', help='check interval, minutes', type=int, default=100)
 argparser.add_argument('-l', '--limit', help='limit records from source file', type=int)
 args = argparser.parse_args()
+
+# some work variables
+workdir = os.path.dirname(os.path.realpath(__file__))
+template_file_path = os.path.join(workdir, 'haproxy.template')
+output_file_path = os.path.join(workdir, args.output)
 
 with open(template_file_path, 'rt') as template_file:
     template_obj = Template(template_file.read())

@@ -32,7 +32,7 @@ proxies = {
 logging.basicConfig(
     filename=config['check']['log'],
     format='%(asctime)s [%(levelname)s] %(message)s',
-    level=logging.WARNING
+    level=logging.INFO
 )
 
 
