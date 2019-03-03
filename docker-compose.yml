@@ -1,0 +1,14 @@
+version: '3.7'
+services:
+  proxy:
+    build: ./
+    image: haproxy-collect:latest
+    container_name: haproxy-collect
+    ports:
+      - target : 1080
+        published: 1080
+        protocol: tcp
+      - target : 9000
+        published: 1081
+        protocol: tcp
+    restart: unless-stopped

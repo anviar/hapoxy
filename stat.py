@@ -1,19 +1,21 @@
-#!/usr/local/bin/python3
+#!/usr/bin/env python3
 
 import socket
-import six
-import configparser
+from configparser import ConfigParser
 import os
-import time
+from time import time
+from pathlib import Path
+from urllib.request import urlopen
+import csv
 
-workdir = os.path.dirname(os.path.realpath(__file__))
-config = configparser.ConfigParser()
-config.read(os.path.join(workdir, 'haproxy-tools.cfg'))
-timestamp = int(time.time())
-pidfile = os.path.join(workdir, 'haproxy-stat.pid')
+workdir = Path(__file__).resolve().parent
+config = ConfigParser()
+config.read(workdir / 'haproxy-tools.cfg')
+timestamp = int(time())
+pidfile = workdir / 'haproxy-stat.pid'
+
 
 # check what instance for this TLD not running on same host
-
 def check_pid(pid):
     try:
         os.kill(int(pid), 0)
@@ -37,52 +39,29 @@ else:
         pidfile_obj.write(str(os.getpid()))
 
 # read data from haproxy
-haproxy_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-haproxy_socket.connect(config['haproxy']['socket'])
-haproxy_socket.send(six.b('show stat' + '\n'))
-file_handle = haproxy_socket.makefile()
-data = file_handle.read().splitlines()
-haproxy_socket.close()
-
-
-def parse_stat_table(line) -> list:
-    return line.strip('#').strip().strip(',').split(',')
-
-head = parse_stat_table(data[0])
-parsed_table = dict()
-for line in data[1:]:
-    line_split = parse_stat_table(line)
-    if len(line_split) == 1:
-        continue
-    if line_split[0] not in parsed_table:
-        parsed_table.update({line_split[0]: {}})
-    if line_split[1] not in parsed_table[line_split[0]]:
-        parsed_table[line_split[0]].update({line_split[1]: {}})
-    f_indx = 2
-    for field in list(line_split[f_indx:]):
-        try:
-            f_value = int(line_split[f_indx])
-        except ValueError:
-            f_value = line_split[f_indx]
-        if not f_value == '':
-            parsed_table[line_split[0]][line_split[1]].update({head[f_indx]: f_value})
-        f_indx += 1
-
-# send data to graphite
-for item in config['graphite']['general_values'].split(','):
-    graphite_message = '%s %s %i' % (
-        config['graphite']['prefix'] + item,
-        str(parsed_table['main']['FRONTEND'][item]),
-        timestamp)
+with urlopen(config['haproxy']['url'], timeout=10) as stat_req:
+    s_lines = list()
+    for l in stat_req:
+        s_lines.append(l.decode('ASCII').strip('# '))
+    csv_obj = csv.DictReader(s_lines, delimiter=',')
+    data = [line for line in csv_obj]
 
 proxy_up = 0
 proxy_down = 0
-for proxy in parsed_table['proxy']:
-    if 'addr' in parsed_table['proxy'][proxy]:
-        if parsed_table['proxy'][proxy]['status'].startswith('UP'):
+for item in data:
+    if item['pxname'] == 'proxy':
+        if item['status'].startswith('UP'):
             proxy_up += 1
-        elif parsed_table['proxy'][proxy]['status'].startswith('DOWN'):
+        elif item['status'].startswith('DOWN'):
             proxy_down += 1
+
+
+def get_general(g_item: str):
+    for i in data:
+        if i['pxname'] == 'stats' and i['svname'] == 'FRONTEND':
+            return i[g_item]
+    return 0
+
 
 graphite_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -100,18 +79,20 @@ def send_graphite(item, value):
         )
     )
 
+
 for item in config['graphite']['general_values'].split(','):
-    send_graphite(item, parsed_table['main']['FRONTEND'][item])
+    send_graphite(item, get_general(item))
 send_graphite('proxies.up', proxy_up)
 send_graphite('proxies.down', proxy_down)
 
 lastsess = list()
-for p in parsed_table['proxy']:
-    if 'addr' in parsed_table['proxy'][p] and parsed_table['proxy'][p]['status'] == 'UP':
-        lastsess.append(parsed_table['proxy'][p]['lastsess'])
-send_graphite('lastsess.min', min(lastsess))
-send_graphite('lastsess.max', max(lastsess))
-send_graphite('lastsess.avg', sum(lastsess) // len(lastsess))
+for i in data:
+    if i['pxname'] == 'proxy' and i['status'] == 'UP' and int(i['lastsess']) > 0:
+        lastsess.append(int(i['lastsess']))
+if len(lastsess) > 1:
+    send_graphite('lastsess.min', min(lastsess))
+    send_graphite('lastsess.max', max(lastsess))
+    send_graphite('lastsess.avg', sum(lastsess) // len(lastsess))
 
 graphite_sock.close()
-os.remove(pidfile)
+pidfile.unlink()
