@@ -1,0 +1,15 @@
+[Unit]
+Description=HAProxy Load Balancer
+After=network.target
+
+[Service]
+Environment="CONFIG=/etc/haproxy/%i.cfg" "PIDFILE=/run/%i.pid"
+ExecStartPre=/usr/local/sbin/haproxy -f $CONFIG -c -q
+ExecStart=/usr/local/sbin/haproxy-systemd-wrapper -f $CONFIG -p $PIDFILE
+ExecReload=/usr/local/sbin/haproxy -f $CONFIG -c -q
+ExecReload=/bin/kill -USR2 $MAINPID
+KillMode=mixed
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
