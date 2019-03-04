@@ -1,5 +1,5 @@
 [haproxy]
-socket=/var/run/proxy.sock
+url=http://127.0.0.1:1081/haproxy?stats;csv
 [graphite]
 prefix=haproxy.HOSTNAME.
 host=graphite
