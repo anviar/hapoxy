@@ -29,7 +29,7 @@ if os.path.isfile(pidfile):
     with open(pidfile, 'r') as pidfile_obj:
         last_pid = pidfile_obj.read()
     if check_pid(last_pid):
-        print("Already running: " + pidfile)
+        print(f"Already running: {last_pid}")
         exit(1)
     else:
         with open(pidfile, 'w') as pidfile_obj:
